@@ -3,785 +3,524 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Rock • Paper • Scissors — Neon Arcade</title>
+<title>Night Walk — Trees, House, Fireflies</title>
 <style>
-  :root{
-    --bg1: #0b1020;
-    --bg2: #131a34;
-    --accent: #7cf5ff;
-    --accent2:#b388ff;
-    --win:#35f68b;
-    --lose:#ff5e6a;
-    --draw:#ffdb6e;
-    --text:#e9f2ff;
-    --muted:#b8c6e3;
-    --panel:#101935a6;
-    --panel-solid:#101935f0;
-    --glass:#ffffff0f;
-    --shadow: 0 10px 30px rgba(0,0,0,.35);
+  html, body { height: 100%; margin: 0; background: #03060b; overflow: hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color: #eaf6ff; }
+  #overlay {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    background: radial-gradient(1200px 700px at 50% -10%, #1b2b5566, transparent 55%), #03060bf0;
+    user-select: none; z-index: 10;
   }
-
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    color:var(--text);
-    background:
-      radial-gradient(1200px 600px at 10% -10%, #1b2c6b22, transparent 60%),
-      radial-gradient(1000px 800px at 120% 20%, #7c2bff15, transparent 60%),
-      linear-gradient(135deg,var(--bg1),var(--bg2));
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-    overflow:hidden;
+  .panel {
+    width: min(720px, 92vw);
+    background: #0a1328cc; border: 1px solid #ffffff22; border-radius: 16px;
+    padding: 18px 18px 16px; backdrop-filter: blur(8px) saturate(115%);
+    box-shadow: 0 20px 50px rgba(0,0,0,.45);
   }
-
-  /* Animated ambient gradient shimmer */
-  body:before, body:after{
-    content:"";
-    position:fixed; inset:-20%;
-    background: conic-gradient(from 0deg, #7c2bff10, #00eaff10, transparent 30%);
-    filter: blur(60px);
-    animation: swirl 24s linear infinite;
-    pointer-events:none;
+  h1 { margin: 6px 0 8px; font-size: clamp(20px, 3vw, 28px); letter-spacing: .4px }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; color: #bcd1ff }
+  .kbd {
+    display:inline-flex; align-items:center; justify-content:center; padding: 4px 8px; min-width: 26px;
+    background:#0d1b41; border:1px solid #ffffff22; border-radius: 6px; font-weight:700; letter-spacing:.3px
   }
-  body:after{ animation-duration: 38s; mix-blend-mode: screen; opacity:.6}
-  @keyframes swirl{to{transform: rotate(360deg)}}
-
-  /* Canvas for FX */
-  #fx{
-    position:fixed; inset:0; width:100%; height:100%;
-    pointer-events:none; z-index: 0;
+  .btn {
+    appearance:none; border:none; padding: 10px 14px; border-radius: 10px; font-weight: 800;
+    cursor: pointer; background: linear-gradient(180deg,#8ad3ff,#39a8ff); color:#04121c; box-shadow: 0 10px 20px #0091ff33;
   }
-
-  .wrap{
-    position:relative; z-index:1;
-    height:100%; width:100%;
-    display:grid; place-items:center;
-    padding: 20px;
+  #hud {
+    position: fixed; left: 10px; bottom: 10px; z-index: 2; color: #bcd1ff; font-size: 12.5px;
+    padding: 6px 8px; background: #0a1328aa; border:1px solid #ffffff22; border-radius: 8px; backdrop-filter: blur(6px);
   }
-
-  .panel{
-    width:min(980px, 94vw);
-    background: linear-gradient(180deg, var(--panel), var(--panel-solid));
-    border: 1px solid #ffffff1a;
-    border-radius: 18px;
-    box-shadow: var(--shadow);
-    backdrop-filter: blur(10px) saturate(120%);
-    padding: 18px 18px 20px;
-  }
-
-  .topbar{
-    display:flex; align-items:center; justify-content:space-between;
-    gap:12px; padding: 6px 6px 8px;
-  }
-  .title{
-    display:flex; align-items:center; gap:10px; letter-spacing:.4px;
-    font-weight:800; font-size: clamp(18px, 2.1vw, 24px);
-    text-shadow: 0 0 12px #00eaff40;
-  }
-  .title .dot{ color: var(--accent2)}
-  .title .badge{
-    font-size:.72em; padding:.22em .6em; border-radius: 999px;
-    background: linear-gradient(90deg, #00eaff30, #7c2bff30);
-    border:1px solid #ffffff1a; color:#cdeaff;
-  }
-  .toggles{
-    display:flex; gap:8px; align-items:center;
-  }
-  .toggle{
-    display:flex; align-items:center; gap:8px;
-    background: #0f1730aa;
-    border:1px solid #ffffff1a;
-    border-radius: 12px; padding:8px 10px;
-    cursor:pointer; user-select:none;
-    transition: transform .12s ease, background .2s ease, border-color .2s ease;
-  }
-  .toggle:active{ transform: scale(.98) }
-  .toggle .led{
-    width:14px; height:14px; border-radius:50%;
-    box-shadow: 0 0 10px currentColor;
-  }
-  .toggle.on .led{ color: var(--win); background: var(--win) }
-  .toggle.off .led{ color: #6b7280; background: #6b7280 }
-  .toggle .label{ color: var(--muted); font-weight:600; font-size: 12.5px}
-
-  .scores{
-    display:flex; gap:16px; align-items:center; justify-content: center;
-    margin: 6px 0 10px;
-  }
-  .score{
-    flex:1; min-width: 180px; display:flex; align-items:center; justify-content:space-between;
-    background: #0d1430cc; border:1px solid #ffffff1a;
-    border-radius: 14px; padding: 10px 14px;
-  }
-  .score h3{ margin:0; font-size: 13px; color:var(--muted); font-weight:700; letter-spacing:.4px }
-  .score .val{ font-size: 26px; font-weight:900; letter-spacing: .5px }
-  .score.me .val{ color: #b6faff }
-  .score.bot .val{ color: #e7c6ff }
-  .score .streak{ font-size:12px; color:#a7b4d8 }
-
-  .arena{
-    position:relative;
-    display:grid; grid-template-columns: 1fr auto 1fr;
-    align-items:center; gap: 14px;
-    padding: 14px 10px 18px;
-  }
-  .side{
-    display:grid; gap:10px;
-  }
-
-  .card{
-    position:relative;
-    border-radius: 16px;
-    border: 1px solid #ffffff1a;
-    background: radial-gradient(120px 80px at 20% 0%, #ffffff0c, transparent 60%), #0f1734e0;
-    min-height: 120px;
-    display:grid; place-items:center;
-    perspective: 800px;
-    overflow:hidden;
-    box-shadow: inset 0 0 0 1px #ffffff0a;
-  }
-  .card .inner{
-    position:relative;
-    width: 100%; height: 100%;
-    transform-style: preserve-3d;
-    transition: transform .7s cubic-bezier(.2,.8,.2,1);
-  }
-  .card.reveal .inner{ transform: rotateY(180deg) }
-  .card .face{
-    position:absolute; inset:0; display:grid; place-items:center;
-    backface-visibility:hidden; padding:12px;
-  }
-  .card .back{ transform: rotateY(180deg) }
-
-  .choice-icon{
-    font-size: clamp(40px, 8vw, 72px);
-    filter: drop-shadow(0 4px 12px #00000070);
-    transform: translateZ(30px);
-  }
-  .label{
-    position:absolute; bottom:8px; left:10px; right:10px;
-    text-align:center; font-size: 12px; color: var(--muted)
-  }
-  .me .choice-icon{ text-shadow: 0 0 24px #00eaff40 }
-  .bot .choice-icon{ text-shadow: 0 0 24px #cba3ff40 }
-
-  .vs{
-    position:relative; width: 110px; height: 110px; flex:0 0 110px;
-    display:grid; place-items:center;
-  }
-  .vs .ring{
-    position:absolute; inset:0;
-    border-radius:50%;
-    background:
-      radial-gradient(circle at 50% 50%, #ffffff50 0 2px, transparent 2px),
-      conic-gradient(from 290deg, #00eaff, #b388ff);
-    -webkit-mask:
-      radial-gradient(circle at 50% 50%, transparent 40%, black 42%);
-    mask:
-      radial-gradient(circle at 50% 50%, transparent 40%, black 42%);
-    filter: blur(.6px);
-    animation: spin 4s linear infinite;
-    opacity:.9;
-  }
-  @keyframes spin{ to{ transform: rotate(360deg) } }
-  .vs .text{
-    position:relative; z-index:1; font-weight:900; letter-spacing:1.2px;
-    text-shadow: 0 0 16px #00eaff55; color:#dff7ff; font-size: 18px
-  }
-
-  .result{
-    margin-top: 8px;
-    text-align:center;
-    font-weight:800; letter-spacing:.5px;
-    font-size: clamp(16px, 2.2vw, 20px);
-    min-height: 28px;
-    text-shadow: 0 0 14px #ffffff15;
-  }
-  .result.win{ color:var(--win) }
-  .result.lose{ color:var(--lose) }
-  .result.draw{ color:var(--draw) }
-  .result .small{ display:block; font-size: 12px; color: var(--muted); font-weight:600; letter-spacing:.3px; margin-top: 4px}
-
-  .controls{
-    margin-top: 14px; display:flex; gap: 12px; justify-content:center; flex-wrap: wrap;
-  }
-  .choice-btn{
-    position:relative;
-    appearance:none; border: none; cursor: pointer; user-select: none;
-    padding: 16px 18px; min-width: 160px;
-    border-radius: 14px; font-size: 18px; font-weight:900; letter-spacing:.6px;
-    color:#081422;
-    background: linear-gradient(175deg, #c9f6ff, #87daff);
-    box-shadow:
-      inset 0 1px 0 #ffffffaa,
-      0 10px 18px #00b3ff35;
-    transform: translateZ(0);
-    transition: transform .12s cubic-bezier(.2,.9,.2,1), filter .2s ease, box-shadow .2s ease;
-    outline:none;
-  }
-  .choice-btn .emoji{ font-size: 24px; margin-right: 10px; filter: drop-shadow(0 2px 4px #00000055) }
-  .choice-btn:hover{ transform: translateY(-2px) scale(1.02); filter: saturate(1.1) }
-  .choice-btn:active{ transform: translateY(1px) scale(.99) }
-  .choice-btn[data-choice="rock"]{
-    background: linear-gradient(175deg, #ffe3cf, #ffb779);
-    box-shadow: inset 0 1px 0 #fff4ea, 0 10px 18px #ff8f0035;
-  }
-  .choice-btn[data-choice="paper"]{
-    background: linear-gradient(175deg, #e9e9ff, #bfa9ff);
-    box-shadow: inset 0 1px 0 #ffffff, 0 10px 18px #7b4dff35;
-  }
-  .choice-btn[data-choice="scissors"]{
-    background: linear-gradient(175deg, #dcffe7, #98ffbf);
-    box-shadow: inset 0 1px 0 #ffffff, 0 10px 18px #1aff7a35;
-  }
-
-  .mutebar{
-    margin-top: 12px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;
-  }
-  .mutebar button.small{
-    background: #0f1730dd; color: #d7e7ff; border:1px solid #ffffff1a;
-    padding:8px 10px; border-radius: 10px; font-weight:700; letter-spacing:.4px; cursor:pointer;
-  }
-  .mutebar button.small:hover{ filter: brightness(1.1) }
-
-  .foot{
-    margin-top: 12px; text-align:center; color: var(--muted); font-size:12.5px
-  }
-
-  /* Glow states on cards */
-  .card.win{ box-shadow: 0 0 0 1px #00ffb040, 0 0 30px #00ffb020, inset 0 0 0 1px #00ffb020 }
-  .card.lose{ box-shadow: 0 0 0 1px #ff445540, 0 0 30px #ff445520, inset 0 0 0 1px #ff445520 }
-  .card.draw{ box-shadow: 0 0 0 1px #ffd85b40, 0 0 30px #ffd85b20, inset 0 0 0 1px #ffd85b20 }
-
-  /* Pulse when ready */
-  .pulse{
-    animation: pulse 1.8s ease-in-out infinite;
-  }
-  @keyframes pulse{
-    0%,100%{ transform: scale(1) }
-    50%{ transform: scale(1.06) }
-  }
-
-  /* Responsive tweaks */
-  @media (max-width: 760px){
-    .arena{ grid-template-columns: 1fr; }
-    .vs{ order:-1; margin: 8px auto }
-    .side{ grid-template-columns: 1fr; }
-    .card{ min-height: 100px }
-    .choice-btn{ min-width: 120px; padding:14px 16px; font-size:16px }
-    .choice-btn .emoji{ font-size:22px }
-  }
+  #hint { color: #8fb6ff }
+  #flashState { color: #ffe28f }
 </style>
 </head>
 <body>
-<canvas id="fx"></canvas>
-
-<div class="wrap">
-  <div class="panel" role="application" aria-label="Rock Paper Scissors Neon Arcade">
-    <div class="topbar">
-      <div class="title">
-        <span>Rock <span class="dot">•</span> Paper <span class="dot">•</span> Scissors</span>
-        <span class="badge">Neon Arcade</span>
-      </div>
-      <div class="toggles">
-        <div class="toggle on" id="soundToggle" role="switch" aria-checked="true" tabindex="0" title="Toggle sound">
-          <span class="led"></span>
-          <span class="label">Sound</span>
-        </div>
-        <div class="toggle on" id="fxToggle" role="switch" aria-checked="true" tabindex="0" title="Toggle particles">
-          <span class="led"></span>
-          <span class="label">Particles</span>
-        </div>
-      </div>
+<div id="overlay">
+  <div class="panel">
+    <h1>Night Walk</h1>
+    <div class="row">Explore a medium-sized world with trees, rocks, a cozy house, fog and moonlight. 100 fireflies blink and wander. Toggle your flashlight for vibes.</div>
+    <div style="height:8px"></div>
+    <div class="row">
+      <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> Move
+      <span class="kbd">Mouse</span> Look
+      <span class="kbd">Shift</span> Sprint
+      <span class="kbd">F</span> Flashlight
+      <span class="kbd">H</span> Help
+      <span class="kbd">Esc</span> Unlock
     </div>
-
-    <div class="scores" aria-live="polite">
-      <div class="score me">
-        <h3>You</h3>
-        <div class="val" id="meScore">0</div>
-        <div class="streak" id="streak">Streak: 0</div>
-      </div>
-      <div class="score bot">
-        <h3>Bot</h3>
-        <div class="val" id="botScore">0</div>
-        <div class="streak" id="best">Best: 0</div>
-      </div>
-    </div>
-
-    <div class="arena">
-      <div class="side me">
-        <div class="card" id="meCard" aria-label="Your choice">
-          <div class="inner">
-            <div class="face front">
-              <div class="choice-icon" id="meIcon">❔</div>
-            </div>
-            <div class="face back">
-              <div class="choice-icon" id="meIconBack">❔</div>
-            </div>
-          </div>
-          <div class="label">You</div>
-        </div>
-      </div>
-
-      <div class="vs" aria-hidden="true">
-        <div class="ring"></div>
-        <div class="text">VS</div>
-      </div>
-
-      <div class="side bot">
-        <div class="card" id="botCard" aria-label="Bot choice">
-          <div class="inner">
-            <div class="face front">
-              <div class="choice-icon" id="botIconFront">🤖</div>
-            </div>
-            <div class="face back">
-              <div class="choice-icon" id="botIcon">❔</div>
-            </div>
-          </div>
-          <div class="label">Bot</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="result pulse" id="resultText">Choose your move!</div>
-
-    <div class="controls">
-      <button class="choice-btn" data-choice="rock" aria-label="Rock (R)">
-        <span class="emoji">✊</span> Rock (R)
-      </button>
-      <button class="choice-btn" data-choice="paper" aria-label="Paper (P)">
-        <span class="emoji">✋</span> Paper (P)
-      </button>
-      <button class="choice-btn" data-choice="scissors" aria-label="Scissors (S)">
-        <span class="emoji">✌️</span> Scissors (S)
-      </button>
-    </div>
-
-    <div class="mutebar">
-      <button class="small" id="resetBtn" title="Reset scores">Reset</button>
-      <button class="small" id="hintBtn" title="Show tips">Tips</button>
-    </div>
-
-    <div class="foot">
-      Hotkeys: R / P / S • Click the toggles to enable/disable sound and particles.
-    </div>
+    <div style="height:10px"></div>
+    <button class="btn" id="startBtn">Click to Play</button>
   </div>
 </div>
 
-<script>
-(() => {
-  // =========================
-  // Utility & Constants
-  // =========================
-  const CHOICES = ["rock", "paper", "scissors"];
-  const EMOJI = { rock: "✊", paper: "✋", scissors: "✌️" };
-  const COLORS = {
-    win:["#19f0a8","#7effd1","#17d785","#2ef5c9","#b0ffe1"],
-    lose:["#ff5e6a","#ff8e9b","#ff4455","#ff7080","#ffb9c0"],
-    draw:["#ffd85b","#ffe79b","#ffcf3a","#ffe08a","#fff0be"],
-    pulse:["#7cf5ff","#b388ff","#7cf5ff"]
-  };
+<div id="hud">
+  <span id="hint">WASD + Mouse • F: Flashlight • H: Help • Esc: Unlock</span>
+  <span> • Flashlight: <b id="flashState">ON</b></span>
+</div>
 
-  const ui = {
-    meScore: document.getElementById("meScore"),
-    botScore: document.getElementById("botScore"),
-    streak: document.getElementById("streak"),
-    best: document.getElementById("best"),
-    meCard: document.getElementById("meCard"),
-    meIcon: document.getElementById("meIcon"),
-    meIconBack: document.getElementById("meIconBack"),
-    botCard: document.getElementById("botCard"),
-    botIcon: document.getElementById("botIcon"),
-    botIconFront: document.getElementById("botIconFront"),
-    result: document.getElementById("resultText"),
-    resetBtn: document.getElementById("resetBtn"),
-    hintBtn: document.getElementById("hintBtn"),
-    buttons: Array.from(document.querySelectorAll(".choice-btn")),
-    soundToggle: document.getElementById("soundToggle"),
-    fxToggle: document.getElementById("fxToggle"),
-    fxCanvas: document.getElementById("fx")
-  };
+<script type="module">
+/* Minimal 3D night walk with trees, rocks, house, fog, stars and fireflies.
+   Requires internet to load Three.js modules from unpkg. Save as an HTML file and open.
+*/
+import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+import { PointerLockControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/PointerLockControls.js';
 
-  // =========================
-  // State
-  // =========================
-  let scores = { me: 0, bot: 0, streak: 0, best: 0 };
-  let lastPlayer = null;
-  let busy = false;
+const overlay = document.getElementById('overlay');
+const startBtn = document.getElementById('startBtn');
+const flashStateEl = document.getElementById('flashState');
 
-  let soundEnabled = true;
-  let fxEnabled = true;
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
 
-  // =========================
-  // Canvas Particles
-  // =========================
-  const dpr = Math.max(1, window.devicePixelRatio || 1);
-  const ctx = ui.fxCanvas.getContext("2d");
-  let W = 0, H = 0;
-  let particles = [];
-  let pointer = {x:0,y:0, t:0};
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05070c);
+scene.fog = new THREE.FogExp2(0x04070d, 0.0085);
 
-  function resize(){
-    W = ui.fxCanvas.width = Math.floor(window.innerWidth * dpr);
-    H = ui.fxCanvas.height = Math.floor(window.innerHeight * dpr);
-    ui.fxCanvas.style.width = "100%";
-    ui.fxCanvas.style.height = "100%";
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 2000);
+camera.position.set(0, 1.7, 6);
+
+// Controls
+const controls = new PointerLockControls(camera, renderer.domElement);
+controls.getObject().position.set(0, 1.7, 0);
+
+startBtn.addEventListener('click', () => {
+  controls.lock();
+});
+controls.addEventListener('lock', () => overlay.style.display = 'none');
+controls.addEventListener('unlock', () => overlay.style.display = 'grid');
+
+// Resize
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// Physically-correctish lighting setup
+renderer.physicallyCorrectLights = true;
+
+// Sky stars
+{
+  const starCount = 1200;
+  const positions = new Float32Array(starCount * 3);
+  for (let i=0;i<starCount;i++){
+    const r = 900 + Math.random()*400;
+    const theta = Math.random()*Math.PI*2;
+    const phi = Math.random()*Math.PI*0.45; // upper sky
+    const x = r * Math.cos(theta) * Math.sin(phi);
+    const y = r * Math.cos(phi);
+    const z = r * Math.sin(theta) * Math.sin(phi);
+    positions[i*3+0]=x; positions[i*3+1]=Math.abs(y)+120; positions[i*3+2]=z;
   }
-  window.addEventListener("resize", resize, {passive:true});
-  resize();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color: 0xbfdcff, size: 1.2, sizeAttenuation: true, transparent: true, opacity: 0.9 });
+  const stars = new THREE.Points(geo, mat);
+  scene.add(stars);
+}
 
-  function rand(a,b){ return Math.random()*(b-a)+a }
-  function pick(arr){ return arr[(Math.random()*arr.length)|0] }
+// Lights: faint ambient, moon directional, house glow, flashlight
+const hemi = new THREE.HemisphereLight(0x223a66, 0x0a0c10, 0.15);
+scene.add(hemi);
 
-  function spawnConfetti(x, y, count=120){
-    if(!fxEnabled) return;
-    const base = { x: x*dpr, y: y*dpr };
-    for(let i=0;i<count;i++){
-      particles.push({
-        x: base.x, y: base.y,
-        vx: rand(-4,4)*dpr, vy: rand(-9,-3)*dpr,
-        g: rand(0.12,0.24)*dpr,
-        life: rand(60,120), age: 0,
-        size: rand(4,8)*dpr,
-        rot: rand(0,Math.PI*2),
-        vr: rand(-.2,.2),
-        shape: (Math.random()<.5) ? "rect" : "tri",
-        color: pick(COLORS.win),
-        alpha: 1,
-        air: rand(0.96,0.985)
-      });
-    }
+const moonLight = new THREE.DirectionalLight(0xb8cfff, 1.2);
+moonLight.position.set(-80, 120, -60);
+moonLight.castShadow = true;
+moonLight.shadow.mapSize.set(2048, 2048);
+moonLight.shadow.camera.left = -200; moonLight.shadow.camera.right = 200;
+moonLight.shadow.camera.top = 200; moonLight.shadow.camera.bottom = -200;
+moonLight.shadow.bias = -0.00008;
+scene.add(moonLight);
+scene.add(moonLight.target);
+moonLight.target.position.set(0, 0, 0);
+
+// Little moon mesh
+{
+  const moon = new THREE.Mesh(
+    new THREE.SphereGeometry(5, 32, 32),
+    new THREE.MeshBasicMaterial({ color: 0xdde9ff })
+  );
+  moon.position.copy(moonLight.position).multiplyScalar(0.9);
+  scene.add(moon);
+}
+
+// World/terrain
+const WORLD_SIZE = 360;             // total width/length
+const HALF = WORLD_SIZE/2;
+const PLAYER_EYE = 1.7;
+
+// Height function (keep cheap but organic)
+function heightAt(x, z){
+  // scaled coords
+  const sx = x * 0.03, sz = z * 0.03;
+  const h = Math.sin(sx*1.2) * Math.cos(sz*1.1) * 0.9
+          + Math.sin((sx+sz)*0.7) * 0.6
+          + Math.cos(sx*0.35 - sz*0.6) * 0.4;
+  return h * 0.8; // amplitude
+}
+
+const groundGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 180, 180);
+groundGeo.rotateX(-Math.PI/2);
+{
+  const pos = groundGeo.attributes.position;
+  for (let i=0;i<pos.count;i++){
+    const x = pos.getX(i), z = pos.getZ(i);
+    pos.setY(i, heightAt(x, z));
   }
-  function spawnShards(x,y,count=90){
-    if(!fxEnabled) return;
-    const base = { x: x*dpr, y: y*dpr };
-    for(let i=0;i<count;i++){
-      const angle = rand(-Math.PI, 0);
-      const speed = rand(2,7)*dpr;
-      particles.push({
-        x: base.x, y: base.y,
-        vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - rand(1,2)*dpr,
-        g: rand(0.08,0.18)*dpr,
-        life: rand(40,80), age: 0,
-        size: rand(2,5)*dpr,
-        rot: rand(0,Math.PI*2),
-        vr: rand(-.3,.3),
-        shape: "rect",
-        color: pick(COLORS.lose),
-        alpha: 1,
-        air: rand(0.94,0.98)
-      });
-    }
-  }
-  function spawnSparkles(x,y,count=70){
-    if(!fxEnabled) return;
-    const base = { x: x*dpr, y: y*dpr };
-    for(let i=0;i<count;i++){
-      const a = rand(0,Math.PI*2);
-      const s = rand(.5,3)*dpr;
-      particles.push({
-        x: base.x, y: base.y,
-        vx: Math.cos(a)*s, vy: Math.sin(a)*s,
-        g: 0,
-        life: rand(25,50), age: 0,
-        size: rand(1.5,3.5)*dpr,
-        rot: 0, vr:0, shape:"circ",
-        color: pick(COLORS.draw),
-        alpha: 1, air: .98
-      });
-    }
-  }
-  function spawnTrail(x,y){
-    if(!fxEnabled) return;
-    for(let i=0;i<3;i++){
-      particles.push({
-        x: x*dpr+rand(-6,6), y: y*dpr+rand(-6,6),
-        vx: rand(-.4,.4)*dpr, vy: rand(-.6,.2)*dpr,
-        g: 0.02*dpr, life: rand(20,36), age: 0,
-        size: rand(1.2,2.6)*dpr, rot: 0, vr:0,
-        shape:"circ", color: pick(COLORS.pulse), alpha: .95, air: .985
-      });
-    }
-  }
+  pos.needsUpdate = true;
+  groundGeo.computeVertexNormals();
+}
 
-  function stepParticles(){
-    ctx.clearRect(0,0,W,H);
-    for(let i=particles.length-1;i>=0;i--){
-      const p = particles[i];
-      p.age++;
-      if(p.age>p.life){ particles.splice(i,1); continue; }
-      p.vx *= p.air; p.vy *= p.air;
-      p.vy += p.g;
-      p.x += p.vx; p.y += p.vy;
-      p.rot += p.vr;
-      const t = 1 - (p.age/p.life);
-      const alpha = p.alpha * Math.max(0, Math.min(1, t));
-      ctx.globalAlpha = alpha;
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot);
-      ctx.fillStyle = p.color;
-      switch(p.shape){
-        case "rect":
-          ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.7);
-          break;
-        case "tri":
-          ctx.beginPath();
-          ctx.moveTo(0, -p.size);
-          ctx.lineTo(p.size*0.6, p.size*0.6);
-          ctx.lineTo(-p.size*0.6, p.size*0.6);
-          ctx.closePath();
-          ctx.fill();
-          break;
-        default: // circ
-          ctx.beginPath();
-          ctx.arc(0,0,p.size,0,Math.PI*2);
-          ctx.fill();
-      }
-      ctx.restore();
-    }
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(stepParticles);
-  }
-  requestAnimationFrame(stepParticles);
+const groundMat = new THREE.MeshStandardMaterial({
+  color: 0x223d23,
+  roughness: 1.0, metalness: 0.0
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.receiveShadow = true;
+scene.add(ground);
 
-  // Pointer trail
-  window.addEventListener("pointermove", e => {
-    pointer.x = e.clientX; pointer.y = e.clientY; pointer.t = performance.now();
-    spawnTrail(e.clientX, e.clientY);
-  }, {passive:true});
+// Border: visible fence line + clamp
+{
+  const borderGeo = new THREE.BufferGeometry();
+  const verts = new Float32Array([
+    -HALF, 0.05, -HALF,
+     HALF, 0.05, -HALF,
+     HALF, 0.05,  HALF,
+    -HALF, 0.05,  HALF,
+    -HALF, 0.05, -HALF
+  ]);
+  borderGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  const borderMat = new THREE.LineBasicMaterial({ color: 0x3b70ff, linewidth: 2, transparent: true, opacity: 0.5 });
+  const border = new THREE.Line(borderGeo, borderMat);
+  scene.add(border);
+}
 
-  // =========================
-  // Sound (WebAudio)
-  // =========================
-  let audioCtx = null;
+// House (simple cozy hut with warm interior light)
+const house = new THREE.Group();
+(function buildHouse(){
+  const baseW = 10, baseH = 4.2, baseD = 8;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(baseW, baseH, baseD),
+    new THREE.MeshStandardMaterial({ color: 0x20324c, roughness: 0.8, metalness: 0.05 })
+  );
+  base.castShadow = true; base.receiveShadow = true;
+  base.position.y = baseH/2;
 
-  function ensureAudio(){
-    if(!audioCtx){
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } else if (audioCtx.state === "suspended"){
-      audioCtx.resume();
-    }
-  }
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(Math.max(baseW, baseD)*0.7, 3.8, 4),
+    new THREE.MeshStandardMaterial({ color: 0x3b2e2a, roughness: 0.9, metalness: 0.0 })
+  );
+  roof.castShadow = true;
+  roof.position.y = baseH + 1.9;
+  roof.rotation.y = Math.PI/4;
 
-  function tone({freq=440, type="sine", dur=0.15, vol=0.2, attack=0.005, release=0.06, pan=0}={}){
-    if(!soundEnabled) return;
-    ensureAudio();
-    const t0 = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    const p = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
-    osc.type = type; osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0, t0);
-    gain.gain.linearRampToValueAtTime(vol, t0+attack);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + dur + release);
-    if(p){ p.pan.value = pan; osc.connect(gain); gain.connect(p); p.connect(audioCtx.destination); }
-    else { osc.connect(gain); gain.connect(audioCtx.destination); }
-    osc.start(t0);
-    osc.stop(t0 + attack + dur + release + 0.02);
-  }
+  // Simple windows (emissive quads)
+  const winMat = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xffcc88, emissiveIntensity: 2, metalness: 0, roughness: 0.6 });
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2), winMat);
+  win.position.set(0, baseH*0.55, baseD/2 + 0.01);
+  const win2 = win.clone(); win2.position.z = -baseD/2 - 0.01; win2.rotation.y = Math.PI;
 
-  function clickSound(){ tone({freq: 240, type:"triangle", dur:.05, vol:.25}) }
-  function winSound(){
-    const base = 440; // A
-    const notes = [base, base*1.25, base*1.5, base*2];
-    notes.forEach((f,i)=> setTimeout(()=> tone({freq:f, type:"sine", dur:.08, vol:.24}), 40 + i*70));
-  }
-  function loseSound(){
-    const notes = [440*1.5, 440*1.25, 440];
-    notes.forEach((f,i)=> setTimeout(()=> tone({freq:f, type:"sawtooth", dur:.12, vol:.18}), 20 + i*120));
-  }
-  function drawSound(){
-    tone({freq: 660, type:"square", dur:.06, vol:.18});
-    setTimeout(()=> tone({freq: 660, type:"square", dur:.06, vol:.16}), 90);
-  }
+  const door = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.6, 2.6),
+    new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 1 })
+  );
+  door.position.set(-baseW/3, baseH*0.55, baseD/2 + 0.02);
 
-  // =========================
-  // Game Logic
-  // =========================
-  function botPick(){
-    // 75% random, 25% counters your last move
-    if(lastPlayer && Math.random() < 0.25){
-      if(lastPlayer==="rock") return "paper";
-      if(lastPlayer==="paper") return "scissors";
-      return "rock";
-    }
-    return pick(CHOICES);
-  }
+  // Warm interior point light
+  const warm = new THREE.PointLight(0xffcc88, 25, 36, 2);
+  warm.castShadow = true;
+  warm.shadow.mapSize.set(1024,1024);
+  warm.position.set(0, baseH*0.8, 0);
 
-  function judge(me,bot){
-    if(me===bot) return "draw";
-    if(
-      (me==="rock" && bot==="scissors") ||
-      (me==="paper" && bot==="rock") ||
-      (me==="scissors" && bot==="paper")
-    ) return "win";
-    return "lose";
-  }
-
-  function setResult(text, mode){
-    ui.result.classList.remove("win","lose","draw","pulse");
-    ui.result.classList.add(mode);
-    ui.result.innerHTML = text;
-  }
-
-  function centerOfVs(){
-    const vs = document.querySelector(".vs");
-    const r = vs.getBoundingClientRect();
-    return { x: r.left + r.width/2, y: r.top + r.height/2 };
-  }
-
-  function updateScores(mode){
-    if(mode==="win"){ scores.me++; scores.streak++; scores.best = Math.max(scores.best, scores.streak); }
-    if(mode==="lose"){ scores.bot++; scores.streak = 0; }
-    ui.meScore.textContent = scores.me;
-    ui.botScore.textContent = scores.bot;
-    ui.streak.textContent = "Streak: " + scores.streak;
-    ui.best.textContent = "Best: " + scores.best;
-  }
-
-  function flipCardsShow(me, bot){
-    // Reset classes
-    [ui.meCard, ui.botCard].forEach(c=>{
-      c.classList.remove("win","lose","draw"); 
-      c.classList.remove("reveal"); 
-    });
-    ui.meIcon.textContent = EMOJI[me];
-    ui.meIconBack.textContent = EMOJI[me];
-    ui.botIcon.textContent = EMOJI[bot];
-
-    // Fancy reveal of bot
-    void ui.botCard.offsetWidth; // reflow
-    ui.botCard.classList.add("reveal");
-  }
-
-  function decorateOutcome(mode){
-    ui.meCard.classList.add(mode);
-    ui.botCard.classList.add(mode);
-  }
-
-  function play(me){
-    if(busy) return;
-    busy = true;
-    lastPlayer = me;
-    ui.result.classList.remove("pulse");
-
-    clickSound();
-
-    // Disable buttons during round
-    setButtonsEnabled(false);
-
-    // Set placeholder and flip sequence
-    ui.botIconFront.textContent = "🤖";
-    ui.botCard.classList.remove("reveal");
-    ui.meCard.classList.remove("reveal");
-
-    // Small anticipation delay
-    setResult("Thinking...", "draw");
-
-    setTimeout(()=>{
-      const bot = botPick();
-      const outcome = judge(me, bot);
-
-      flipCardsShow(me, bot);
-      // Particles
-      const c = centerOfVs();
-      if(outcome==="win"){ spawnConfetti(c.x, c.y, 150); winSound(); setResult("You win! 🎉", "win"); }
-      else if(outcome==="lose"){ spawnShards(c.x, c.y, 120); loseSound(); setResult("You lose! 💥", "lose"); }
-      else { spawnSparkles(c.x, c.y, 90); drawSound(); setResult("Draw. 🤝", "draw"); }
-
-      updateScores(outcome);
-      decorateOutcome(outcome);
-
-      // Re-enable after a short pause
-      setTimeout(()=>{
-        setButtonsEnabled(true);
-        ui.result.classList.add("pulse");
-        busy = false;
-      }, 800);
-    }, 420);
-  }
-
-  function setButtonsEnabled(on){
-    ui.buttons.forEach(b=>{
-      b.disabled = !on;
-      b.style.opacity = on ? 1 : .75;
-      b.style.cursor = on ? "pointer" : "not-allowed";
-    });
-  }
-
-  // =========================
-  // Events
-  // =========================
-  ui.buttons.forEach(btn=>{
-    btn.addEventListener("click", e=>{
-      ensureAudio();
-      const choice = btn.getAttribute("data-choice");
-      // Pop a small sparkle at button
-      const r = btn.getBoundingClientRect();
-      spawnSparkles(r.left + r.width/2, r.top + r.height/2, 24);
-      play(choice);
-    });
-  });
-
-  document.addEventListener("keydown", e=>{
-    const k = (e.key||"").toLowerCase();
-    if(k==="r") { play("rock"); ensureAudio() }
-    if(k==="p") { play("paper"); ensureAudio() }
-    if(k==="s") { play("scissors"); ensureAudio() }
-  });
-
-  ui.soundToggle.addEventListener("click", ()=>{
-    soundEnabled = !soundEnabled;
-    ui.soundToggle.classList.toggle("on", soundEnabled);
-    ui.soundToggle.classList.toggle("off", !soundEnabled);
-    ui.soundToggle.setAttribute("aria-checked", String(soundEnabled));
-    if(soundEnabled) clickSound();
-  });
-  ui.fxToggle.addEventListener("click", ()=>{
-    fxEnabled = !fxEnabled;
-    ui.fxToggle.classList.toggle("on", fxEnabled);
-    ui.fxToggle.classList.toggle("off", !fxEnabled);
-    ui.fxToggle.setAttribute("aria-checked", String(fxEnabled));
-    if(fxEnabled){
-      const c = centerOfVs();
-      spawnSparkles(c.x, c.y, 70);
-    } else {
-      particles.length = 0; // clear
-      ctx.clearRect(0,0,W,H);
-    }
-  });
-
-  ui.resetBtn.addEventListener("click", ()=>{
-    ensureAudio();
-    clickSound();
-    scores = { me:0, bot:0, streak:0, best: scores.best };
-    ui.meScore.textContent = "0";
-    ui.botScore.textContent = "0";
-    ui.streak.textContent = "Streak: 0";
-    setResult("Scores reset. Good luck!", "draw");
-    // gentle confetti
-    const c = centerOfVs();
-    spawnSparkles(c.x, c.y, 60);
-  });
-
-  ui.hintBtn.addEventListener("click", ()=>{
-    ensureAudio(); clickSound();
-    setResult("Tip: R beats S, P beats R, S beats P. Try mixing moves!", "draw");
-  });
-
-  // Toggle accessibility with Enter/Space
-  [ui.soundToggle, ui.fxToggle].forEach(el=>{
-    el.addEventListener("keydown", e=>{
-      if(e.key===" " || e.key==="Enter"){ e.preventDefault(); el.click(); }
-    });
-  });
-
-  // Initial state classes
-  ui.soundToggle.classList.add("on");
-  ui.fxToggle.classList.add("on");
-  setButtonsEnabled(true);
+  house.add(base, roof, win, win2, door, warm);
+  // Place the house slightly off-center on higher ground
+  const hx = -WORLD_SIZE*0.18, hz = WORLD_SIZE*0.15;
+  house.position.set(hx, heightAt(hx, hz), hz);
+  scene.add(house);
 })();
+
+// Random trees
+function createTree(){
+  const g = new THREE.Group();
+  const h = THREE.MathUtils.randFloat(4.2, 8.5);
+  const trunkR = THREE.MathUtils.randFloat(0.18, 0.35);
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(trunkR*0.7, trunkR, h, 8),
+    new THREE.MeshStandardMaterial({ color: 0x584330, roughness: 0.9 })
+  );
+  trunk.castShadow = true; trunk.receiveShadow = true;
+  trunk.position.y = h/2;
+
+  const foliageMat = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(THREE.MathUtils.randFloat(0.28,0.36), 0.7, 0.22), roughness: 1, metalness: 0 });
+  const cones = new THREE.Group();
+  const c1 = new THREE.Mesh(new THREE.ConeGeometry(h*0.25, h*0.45, 10), foliageMat);
+  const c2 = c1.clone(); const c3 = c1.clone();
+  c1.position.y = h*0.65;
+  c2.position.y = h*0.9; c2.scale.set(0.85,0.85,0.85);
+  c3.position.y = h*1.08; c3.scale.set(0.65,0.65,0.65);
+  [c1,c2,c3].forEach(c=>{ c.castShadow=true; c.receiveShadow=false; });
+  cones.add(c1,c2,c3);
+
+  g.add(trunk, cones);
+  return g;
+}
+
+function dist2(a,b){ const dx=a.x-b.x, dz=a.z-b.z; return dx*dx+dz*dz; }
+
+// Populate trees
+{
+  const treeCount = 140;
+  const trees = new THREE.Group();
+  const avoid = new THREE.Vector3().copy(house.position);
+  for (let i=0;i<treeCount;i++){
+    let x=0,z=0, tries=0;
+    do{
+      x = THREE.MathUtils.randFloatSpread(WORLD_SIZE-20);
+      z = THREE.MathUtils.randFloatSpread(WORLD_SIZE-20);
+      tries++;
+    } while ((dist2({x,z}, {x:avoid.x, z:avoid.z}) < 45*45 || Math.abs(x)<8 && Math.abs(z)<8) && tries < 20);
+    const t = createTree();
+    const y = heightAt(x,z);
+    t.position.set(x, y, z);
+    t.rotation.y = Math.random()*Math.PI*2;
+    trees.add(t);
+  }
+  scene.add(trees);
+}
+
+// Random rocks
+function createRock(){
+  const g = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(1, 1),
+    new THREE.MeshStandardMaterial({ color: 0x6b7078, roughness: 1 })
+  );
+  const s = THREE.MathUtils.randFloat(0.4, 1.6);
+  g.scale.set(s * THREE.MathUtils.randFloat(0.8,1.3), s * THREE.MathUtils.randFloat(0.7,1.2), s * THREE.MathUtils.randFloat(0.8,1.4));
+  g.castShadow = true; g.receiveShadow = true;
+  return g;
+}
+{
+  const rockCount = 80;
+  const rocks = new THREE.Group();
+  for (let i=0;i<rockCount;i++){
+    const r = createRock();
+    const x = THREE.MathUtils.randFloatSpread(WORLD_SIZE-10);
+    const z = THREE.MathUtils.randFloatSpread(WORLD_SIZE-10);
+    r.position.set(x, heightAt(x,z)+0.25, z);
+    r.rotation.set(Math.random()*0.5, Math.random()*Math.PI, Math.random()*0.5);
+    rocks.add(r);
+  }
+  scene.add(rocks);
+}
+
+// Fireflies: 100 blinking sprites that wander. A few lightweight lights migrate among the brightest.
+const fireflyGroup = new THREE.Group();
+scene.add(fireflyGroup);
+const FIREFLY_COUNT = 100;
+const fireflies = [];
+const spriteTex = (() => {
+  const s = 64;
+  const c = document.createElement('canvas'); c.width = c.height = s;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(s/2,s/2,0, s/2,s/2,s/2);
+  grad.addColorStop(0, 'rgba(255,255,180,1)');
+  grad.addColorStop(0.25, 'rgba(210,255,160,0.85)');
+  grad.addColorStop(0.5, 'rgba(140,255,120,0.5)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,s,s);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+})();
+const fireflyMat = new THREE.SpriteMaterial({
+  map: spriteTex,
+  color: new THREE.Color(0x9eff6b),
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending
+});
+
+for (let i=0;i<FIREFLY_COUNT;i++){
+  const spr = new THREE.Sprite(fireflyMat.clone());
+  const x = THREE.MathUtils.randFloatSpread(WORLD_SIZE*0.9);
+  const z = THREE.MathUtils.randFloatSpread(WORLD_SIZE*0.9);
+  const y = heightAt(x,z) + THREE.MathUtils.randFloat(1.2, 3.5);
+  spr.scale.set(0.6, 0.6, 0.6);
+  spr.position.set(x,y,z);
+  spr.material.color.setHSL(THREE.MathUtils.randFloat(0.18,0.28), 0.9, THREE.MathUtils.randFloat(0.6,0.8));
+  fireflies.push({
+    s: spr,
+    phase: Math.random()*Math.PI*2,
+    speed: THREE.MathUtils.randFloat(0.4, 1.2),
+    radius: THREE.MathUtils.randFloat(6, 18),
+    center: new THREE.Vector3(x, y, z)
+  });
+  fireflyGroup.add(spr);
+}
+
+// Migrating point lights for occasional environmental glow
+const migratingLights = [];
+for (let i=0;i<12;i++){
+  const pl = new THREE.PointLight(0xbfff9a, 3.2, 10, 2);
+  pl.castShadow = false;
+  scene.add(pl);
+  migratingLights.push(pl);
+}
+
+// Flashlight (SpotLight attached to camera)
+const flashlight = new THREE.SpotLight(0xffffff, 30, 70, THREE.MathUtils.degToRad(18), 0.4, 2);
+flashlight.castShadow = true;
+flashlight.shadow.mapSize.set(1024,1024);
+flashlight.shadow.bias = -0.0001;
+flashlight.position.set(0, 0, 0);
+flashlight.target.position.set(0, 0, -1);
+const flashTarget = flashlight.target;
+camera.add(flashlight);
+camera.add(flashTarget);
+scene.add(camera);
+let flashlightOn = true;
+function setFlashlight(on){
+  flashlight.visible = on;
+  flashlightOn = on;
+  flashStateEl.textContent = on ? 'ON' : 'OFF';
+}
+setFlashlight(true);
+
+// Movement
+const keys = { w:false, a:false, s:false, d:false, shift:false };
+addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  switch (e.code) {
+    case 'KeyW': keys.w=true; break;
+    case 'KeyA': keys.a=true; break;
+    case 'KeyS': keys.s=true; break;
+    case 'KeyD': keys.d=true; break;
+    case 'ShiftLeft':
+    case 'ShiftRight': keys.shift=true; break;
+    case 'KeyF': setFlashlight(!flashlightOn); break;
+    case 'KeyH':
+      overlay.style.display = overlay.style.display === 'grid' ? 'none' : 'grid';
+      break;
+  }
+});
+addEventListener('keyup', (e) => {
+  switch (e.code) {
+    case 'KeyW': keys.w=false; break;
+    case 'KeyA': keys.a=false; break;
+    case 'KeyS': keys.s=false; break;
+    case 'KeyD': keys.d=false; break;
+    case 'ShiftLeft':
+    case 'ShiftRight': keys.shift=false; break;
+  }
+});
+
+const velocity = new THREE.Vector3();
+const forward = new THREE.Vector3();
+const right = new THREE.Vector3();
+let lastTime = performance.now();
+
+function clampToWorld(p){
+  p.x = THREE.MathUtils.clamp(p.x, -HALF+1, HALF-1);
+  p.z = THREE.MathUtils.clamp(p.z, -HALF+1, HALF-1);
+}
+
+function updateMovement(dt){
+  const baseSpeed = 8;
+  const sprint = 1.8;
+  const speed = baseSpeed * (keys.shift ? sprint : 1);
+
+  // Direction from camera
+  forward.set(0,0,-1).applyQuaternion(camera.quaternion); forward.y = 0; forward.normalize();
+  right.set(1,0,0).applyQuaternion(camera.quaternion); right.y = 0; right.normalize();
+
+  const accel = new THREE.Vector3();
+  if (keys.w) accel.add(forward);
+  if (keys.s) accel.addScaledVector(forward, -1);
+  if (keys.a) accel.addScaledVector(right, -1);
+  if (keys.d) accel.add(right);
+  if (accel.lengthSq()>0) accel.normalize().multiplyScalar(speed);
+
+  // Smooth acceleration and damping
+  velocity.lerp(accel, 0.18);
+  // Move controls object
+  const obj = controls.getObject();
+  obj.position.addScaledVector(velocity, dt);
+
+  // Clamp within borders
+  clampToWorld(obj.position);
+
+  // Stick to ground: eye height over terrain
+  const groundY = heightAt(obj.position.x, obj.position.z);
+  obj.position.y = groundY + PLAYER_EYE;
+}
+
+// Animate fireflies (wander + flicker)
+function updateFireflies(t){
+  for (let i=0;i<fireflies.length;i++){
+    const f = fireflies[i];
+    const s = f.s;
+    // Lazy circular-ish wander around center + gentle noise
+    const speed = f.speed * 0.2;
+    const angle = t * speed + f.phase;
+    const r = f.radius;
+    const nx = Math.cos(angle) * r;
+    const nz = Math.sin(angle) * r;
+    const baseY = heightAt(f.center.x+nx, f.center.z+nz) + 1.2;
+    s.position.set(f.center.x + nx, baseY + 1.5 + Math.sin(angle*1.7)*0.6, f.center.z + nz);
+
+    // Flicker opacity
+    const flicker = 0.55 + 0.45 * Math.abs(Math.sin(t*2.0 + f.phase*2.7));
+    s.material.opacity = flicker;
+
+    // Keep inside world
+    if (Math.abs(s.position.x) > HALF-4 || Math.abs(s.position.z) > HALF-4){
+      f.center.multiplyScalar(0.92); // pull back toward center
+    }
+  }
+
+  // Move a few point lights to the brightest fireflies (cheap illusion)
+  for (let i=0;i<migratingLights.length;i++){
+    const idx = (Math.floor((t*1.5 + i*7.3)) % fireflies.length + fireflies.length) % fireflies.length;
+    const ff = fireflies[idx].s;
+    const pl = migratingLights[i];
+    pl.color.set(ff.material.color);
+    pl.intensity = 2.5 + ff.material.opacity * 2.5;
+    pl.position.copy(ff.position).add(new THREE.Vector3(0, 0.1, 0));
+  }
+}
+
+// Keep flashlight target aligned with camera forward
+function updateFlashlight(){
+  flashTarget.position.set(0, 0, -1).applyMatrix4(camera.matrixWorld);
+  flashlight.position.copy(camera.position);
+  flashlight.target.position.copy(flashTarget.position);
+}
+
+// Main loop
+function animate(){
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  if (controls.isLocked){
+    updateMovement(dt);
+  }
+  const t = now * 0.001;
+  updateFireflies(t);
+  updateFlashlight();
+
+  renderer.render(scene, camera);
+}
+animate();
 </script>
 </body>
 </html>
