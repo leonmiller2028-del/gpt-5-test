@@ -1,5 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple Cloaker</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Simple Cloaker</h1>
+      <nav>
+        <a href="./index.html" aria-current="page">Home</a>
+        <a href="./settings.html">Settings</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h2>Launch this site in about:blank</h2>
+        <p>Opens a new about:blank tab with this page inside an iframe.</p>
+        <button id="launchab" class="button">Launch in about:blank</button>
+        <p class="note">Panic key and auto-launch behavior can be configured in Settings.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <small>© <span id="year"></span> Simple Cloaker</small>
+    </footer>
+
+    <script src="./script.js"></script>
+  </body>
+  </html>
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
