@@ -1,0 +1,67 @@
+:root {
+  --bg: #0b0f14;
+  --surface: #0f1620;
+  --text: #e6edf3;
+  --muted: #93a1ad;
+  --primary: #47a3ff;
+  --primary-600: #2f8be6;
+  --border: #1f2a36;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
+  background: radial-gradient(1200px 600px at 10% -10%, #15202b 0%, transparent 60%),
+              radial-gradient(1000px 400px at 120% 0%, #0d1721 0%, transparent 60%),
+              var(--bg);
+  color: var(--text);
+}
+
+.site-header, .site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.site-footer { border-top: 1px solid var(--border); border-bottom: 0; margin-top: 40px; }
+
+.site-header nav a {
+  color: var(--muted);
+  margin-left: 12px;
+  text-decoration: none;
+}
+.site-header nav a[aria-current="page"] { color: var(--text); }
+
+.container { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+
+.hero { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; }
+.note { color: var(--muted); }
+
+.button {
+  background: var(--primary);
+  color: #081018;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.button:hover { background: var(--primary-600); }
+.button.secondary { background: #223142; color: var(--text); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+.field { display: grid; gap: 8px; margin-bottom: 16px; }
+.field.checkbox { grid-template-columns: auto 1fr; align-items: center; }
+label { color: var(--text); font-weight: 600; }
+input[type="text"], input[type="url"] {
+  background: #0e1722;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.actions { display: flex; gap: 12px; }
+

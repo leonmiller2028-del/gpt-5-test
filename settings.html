@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings · Simple Cloaker</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Settings</h1>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="./settings.html" aria-current="page">Settings</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <form id="settings-form" class="card" autocomplete="off">
+        <div class="field">
+          <label for="panicurl">Panic URL</label>
+          <input id="panicurl" name="panicurl" type="url" placeholder="https://classroom.google.com/h" />
+          <small>Destination to navigate current tab when cloaking. Default: https://classroom.google.com/h</small>
+        </div>
+
+        <div class="field">
+          <label for="panickey">Panic Key</label>
+          <input id="panickey" name="panickey" type="text" maxlength="1" placeholder="e.g. `\` or `Escape` isn't supported here" />
+          <small>Single character key to trigger panic redirect in current tab.</small>
+        </div>
+
+        <div class="field checkbox">
+          <input id="launchblank" name="launchblank" type="checkbox" />
+          <label for="launchblank">Auto-launch about:blank when embedded</label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="button">Save</button>
+          <button type="button" id="reset" class="button secondary">Reset</button>
+        </div>
+      </form>
+    </main>
+
+    <footer class="site-footer">
+      <small>© <span id="year"></span> Simple Cloaker</small>
+    </footer>
+
+    <script src="./script.js"></script>
+  </body>
+  </html>
+
