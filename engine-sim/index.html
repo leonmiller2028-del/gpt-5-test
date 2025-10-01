@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Engine & Drivetrain Simulator</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --muted: #8b949e;
+        --text: #c9d1d9;
+        --accent: #58a6ff;
+        --good: #2ea043;
+        --warn: #d29922;
+        --bad: #f85149;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        background: radial-gradient(1200px 600px at 70% -10%, #111827, #0b0f1a 60%, #090d16 100%);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        grid-template-rows: auto 1fr auto;
+        gap: 16px;
+        padding: 16px;
+        box-sizing: border-box;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .header {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .title {
+        font-weight: 700;
+        letter-spacing: 0.4px;
+      }
+      .panel {
+        background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 24%), var(--panel);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+      }
+      .cluster { display: grid; gap: 12px; }
+      .controls { display: grid; gap: 12px; }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      .btn {
+        border: 1px solid rgba(255,255,255,0.08);
+        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
+        user-select: none;
+      }
+      .btn:hover { transform: translateY(-1px); }
+      .btn:active { transform: translateY(0); }
+      .btn.primary { background: linear-gradient(180deg, rgba(88,166,255,0.25), rgba(88,166,255,0.12)); border-color: rgba(88,166,255,0.5); }
+      .btn.toggle.on { background: linear-gradient(180deg, rgba(46,160,67,0.35), rgba(46,160,67,0.15)); border-color: rgba(46,160,67,0.6); }
+      .btn.toggle.off { background: linear-gradient(180deg, rgba(248,81,73,0.35), rgba(248,81,73,0.12)); border-color: rgba(248,81,73,0.55); }
+      .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); }
+
+      .dash {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      .gauge {
+        background: radial-gradient(600px 280px at 60% -20%, rgba(88,166,255,0.1), transparent 40%), linear-gradient(180deg, rgba(255,255,255,0.02), transparent 24%), var(--panel);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 12px;
+        display: grid;
+        gap: 8px;
+        align-content: start;
+      }
+      .gauge .label { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+      .gauge .value { font-size: 28px; font-weight: 700; }
+      .bar {
+        height: 10px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 999px;
+        position: relative;
+        overflow: hidden;
+      }
+      .bar > .fill {
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        width: 0%;
+        background: linear-gradient(90deg, var(--good), var(--warn), var(--bad));
+      }
+
+      .pedals {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      }
+      .pedal {
+        display: grid; gap: 8px; align-content: start;
+      }
+      .pedal .pad {
+        height: 110px;
+        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+        border: 1px solid rgba(255,255,255,0.08);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        user-select: none;
+      }
+      .pedal .pad .level {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        height: 0%;
+        background: linear-gradient(180deg, rgba(46,160,67,0.55), rgba(46,160,67,0.25));
+      }
+      .pedal.brake .pad .level { background: linear-gradient(180deg, rgba(248,81,73,0.55), rgba(248,81,73,0.25)); }
+      .pedal .help { font-size: 12px; color: var(--muted); }
+
+      .shifter { display: flex; align-items: center; gap: 10px; }
+      .gear-pill {
+        border: 1px solid rgba(255,255,255,0.08);
+        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+        padding: 8px 12px; border-radius: 999px; font-weight: 700; letter-spacing: 0.5px;
+      }
+
+      .footer { grid-column: 1 / -1; font-size: 12px; color: var(--muted); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+      .help { line-height: 1.4; }
+
+      .audio-gate {
+        position: fixed; inset: 0;
+        display: none; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(4px);
+        z-index: 50;
+      }
+      .audio-card {
+        width: min(520px, 92vw);
+        background: var(--panel);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+      }
+
+      @media (max-width: 980px) {
+        .app { grid-template-columns: 1fr; }
+        .dash { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="header">
+        <div class="title">Engine & Drivetrain Simulator</div>
+        <div class="row">
+          <button id="ignitionBtn" class="btn toggle off" aria-pressed="false">Ignition: OFF</button>
+          <button id="startBtn" class="btn primary">Start</button>
+        </div>
+      </div>
+
+      <div class="panel controls">
+        <div class="row">
+          <div class="gear-pill">Gear: <span id="gearLabel">N</span></div>
+          <div class="row">
+            <button id="gearDown" class="btn">Shift −</button>
+            <button id="gearUp" class="btn">Shift +</button>
+          </div>
+        </div>
+
+        <div class="pedals">
+          <div class="pedal throttle">
+            <div class="label">Throttle</div>
+            <div id="throttlePad" class="pad" title="Click/drag or hold W or ArrowUp">
+              <div id="throttleLevel" class="level"></div>
+            </div>
+            <div class="help">Hold <span class="kbd">W</span> or <span class="kbd">↑</span></div>
+          </div>
+          <div class="pedal brake">
+            <div class="label">Brake</div>
+            <div id="brakePad" class="pad" title="Click/drag or hold S or ArrowDown">
+              <div id="brakeLevel" class="level"></div>
+            </div>
+            <div class="help">Hold <span class="kbd">S</span> or <span class="kbd">↓</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel dash">
+        <div class="gauge">
+          <div class="label">Engine RPM</div>
+          <div id="rpmValue" class="value">0 rpm</div>
+          <div class="bar"><div id="rpmBar" class="fill"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="label">Vehicle Speed</div>
+          <div id="speedValue" class="value">0.0 km/h</div>
+          <div class="bar"><div id="speedBar" class="fill"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="label">Throttle / Brake</div>
+          <div class="row" style="gap:8px">
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Throttle</div>
+              <div class="bar"><div id="throttleBar" class="fill" style="background: linear-gradient(90deg, var(--good), var(--warn));"></div></div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Brake</div>
+              <div class="bar"><div id="brakeBar" class="fill" style="background: linear-gradient(90deg, var(--bad), #d66)"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="gauge">
+          <div class="label">Ground Speed (m/s)</div>
+          <div id="msValue" class="value">0.00 m/s</div>
+          <div class="bar"><div id="msBar" class="fill"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="label">Clutch Slip</div>
+          <div id="slipValue" class="value">0 rad/s</div>
+          <div class="bar"><div id="slipBar" class="fill" style="background: linear-gradient(90deg, var(--warn), var(--bad))"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="label">Status</div>
+          <div id="statusValue" class="value">OFF</div>
+          <div style="font-size:12px;color:var(--muted)">Use <span class="kbd">I</span> to toggle ignition, <span class="kbd">[</span>/<span class="kbd">]</span> to shift.</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="help">
+          Keys: <span class="kbd">I</span> Ignition, <span class="kbd">Space</span> Start, <span class="kbd">W/↑</span> Throttle, <span class="kbd">S/↓</span> Brake, <span class="kbd">[</span> Downshift, <span class="kbd">]</span> Upshift.
+        </div>
+        <div>Physically-inspired, simplified model. Wear headphones for better sound.</div>
+      </div>
+    </div>
+
+    <div id="audioGate" class="audio-gate">
+      <div class="audio-card">
+        <div style="font-weight:700; font-size:18px; margin-bottom:6px">Enable Audio</div>
+        <div style="color:var(--muted); margin-bottom:12px">Your browser requires a tap/click to start sound. Click below to enable the engine audio.</div>
+        <button id="enableAudioBtn" class="btn primary">Enable Audio</button>
+      </div>
+    </div>
+
+    <script>
+      (function() {
+        const TWO_PI = Math.PI * 2;
+        const g = 9.81;
+
+        const sim = {
+          ignitionOn: false,
+          engineRunning: false,
+          starterActive: false,
+          audioReady: false,
+          rpm: 0,
+          targetIdleRpm: 850,
+          redlineRpm: 7000,
+          throttle: 0,
+          brake: 0,
+          gearIndex: 0, // -1 R, 0 N, 1..5 forward
+          gears: [0, 3.6, 2.19, 1.52, 1.22, 1.0, 0.82],
+          finalDrive: 3.42,
+          wheelRadius: 0.33,
+          vehicleSpeed: 0, // m/s (can be negative)
+          engineInertia: 0.28, // kg*m^2
+          clutchStiffness: 8.5, // Nm per rad/s slip (dynamic)
+          clutchMaxTorque: 300, // Nm
+          clutchSoftTime: 0,
+          massKg: 1450,
+          dragCdA: 0.32 * 2.2, // Cd * A
+          airDensity: 1.22,
+          rollingCoeff: 0.015,
+          maxBrakeForce: 9000,
+          lastTime: performance.now(),
+        };
+
+        // UI refs
+        const el = {
+          ignitionBtn: document.getElementById('ignitionBtn'),
+          startBtn: document.getElementById('startBtn'),
+          gearLabel: document.getElementById('gearLabel'),
+          gearUp: document.getElementById('gearUp'),
+          gearDown: document.getElementById('gearDown'),
+          throttlePad: document.getElementById('throttlePad'),
+          throttleLevel: document.getElementById('throttleLevel'),
+          brakePad: document.getElementById('brakePad'),
+          brakeLevel: document.getElementById('brakeLevel'),
+          rpmValue: document.getElementById('rpmValue'),
+          rpmBar: document.getElementById('rpmBar'),
+          speedValue: document.getElementById('speedValue'),
+          speedBar: document.getElementById('speedBar'),
+          msValue: document.getElementById('msValue'),
+          msBar: document.getElementById('msBar'),
+          slipValue: document.getElementById('slipValue'),
+          slipBar: document.getElementById('slipBar'),
+          statusValue: document.getElementById('statusValue'),
+          throttleBar: document.getElementById('throttleBar'),
+          brakeBar: document.getElementById('brakeBar'),
+          audioGate: document.getElementById('audioGate'),
+          enableAudioBtn: document.getElementById('enableAudioBtn'),
+        };
+
+        // Audio setup
+        let audioCtx = null;
+        const audio = {
+          engineGain: null,
+          engineOsc: null,
+          engineOsc2: null,
+          noise: null,
+          noiseFilter: null,
+          master: null,
+          starterGain: null,
+          starterOsc: null,
+        };
+
+        function setupAudio() {
+          if (audioCtx) return;
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const ctx = audioCtx;
+
+          // Master
+          audio.master = ctx.createGain();
+          audio.master.gain.value = 0.9;
+          audio.master.connect(ctx.destination);
+
+          // Engine tone: layered oscillators + filtered noise for exhaust texture
+          audio.engineGain = ctx.createGain();
+          audio.engineGain.gain.value = 0.0;
+          audio.engineGain.connect(audio.master);
+
+          audio.engineOsc = ctx.createOscillator();
+          audio.engineOsc.type = 'sawtooth';
+          audio.engineOsc.frequency.value = 40; // will be modulated by rpm
+          audio.engineOsc.connect(audio.engineGain);
+          audio.engineOsc.start();
+
+          audio.engineOsc2 = ctx.createOscillator();
+          audio.engineOsc2.type = 'square';
+          audio.engineOsc2.frequency.value = 80;
+          const subGain = ctx.createGain();
+          subGain.gain.value = 0.35;
+          audio.engineOsc2.connect(subGain).connect(audio.engineGain);
+          audio.engineOsc2.start();
+
+          // Noise source
+          const bufferSize = 2 * ctx.sampleRate;
+          const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * 0.6;
+          }
+          audio.noise = ctx.createBufferSource();
+          audio.noise.buffer = noiseBuffer;
+          audio.noise.loop = true;
+          audio.noiseFilter = ctx.createBiquadFilter();
+          audio.noiseFilter.type = 'bandpass';
+          audio.noiseFilter.frequency.value = 200;
+          audio.noiseFilter.Q.value = 0.6;
+          const noiseGain = ctx.createGain();
+          noiseGain.gain.value = 0.18;
+          audio.noise.connect(audio.noiseFilter).connect(noiseGain).connect(audio.engineGain);
+          audio.noise.start();
+
+          // Starter motor: whine oscillator through gain
+          audio.starterGain = ctx.createGain();
+          audio.starterGain.gain.value = 0.0;
+          audio.starterGain.connect(audio.master);
+          audio.starterOsc = ctx.createOscillator();
+          audio.starterOsc.type = 'triangle';
+          audio.starterOsc.frequency.value = 120;
+          audio.starterOsc.connect(audio.starterGain);
+          audio.starterOsc.start();
+
+          sim.audioReady = true;
+        }
+
+        function setIgnition(on) {
+          sim.ignitionOn = !!on;
+          el.ignitionBtn.classList.toggle('on', sim.ignitionOn);
+          el.ignitionBtn.classList.toggle('off', !sim.ignitionOn);
+          el.ignitionBtn.setAttribute('aria-pressed', String(sim.ignitionOn));
+          el.ignitionBtn.textContent = 'Ignition: ' + (sim.ignitionOn ? 'ON' : 'OFF');
+          if (!sim.ignitionOn) {
+            sim.engineRunning = false;
+            sim.starterActive = false;
+            // Let rpm coast down
+          }
+        }
+
+        function startEngine() {
+          if (!sim.ignitionOn || sim.engineRunning || sim.starterActive) return;
+          sim.starterActive = true;
+          sim.clutchSoftTime = 0.4; // disengage clutch briefly on start
+          // Starter sound envelope
+          if (sim.audioReady) {
+            const now = audioCtx.currentTime;
+            audio.starterGain.gain.cancelScheduledValues(now);
+            audio.starterGain.gain.setValueAtTime(audio.starterGain.gain.value, now);
+            audio.starterGain.gain.linearRampToValueAtTime(0.55, now + 0.05);
+            audio.starterGain.gain.exponentialRampToValueAtTime(0.08, now + 1.0);
+          }
+          // Starter run for up to 1.2s or until engine catches
+          setTimeout(() => { sim.starterActive = false; }, 1200);
+        }
+
+        function gearLabelText() {
+          if (sim.gearIndex === 0) return 'N';
+          if (sim.gearIndex === -1) return 'R';
+          return String(sim.gearIndex);
+        }
+
+        function shift(dir) {
+          let next = sim.gearIndex + dir;
+          next = Math.max(-1, Math.min(6, next));
+          if (next === sim.gearIndex) return;
+          sim.gearIndex = next;
+          el.gearLabel.textContent = gearLabelText();
+          // soften clutch briefly to simulate slip during shift
+          sim.clutchSoftTime = 0.35;
+        }
+
+        // Input handling: keyboard
+        const keys = new Set();
+        window.addEventListener('keydown', (e) => {
+          keys.add(e.code);
+          if (e.code === 'KeyI') { setIgnition(!sim.ignitionOn); }
+          if (e.code === 'Space') { startEngine(); }
+          if (e.code === 'BracketRight') { shift(1); }
+          if (e.code === 'BracketLeft') { shift(-1); }
+        });
+        window.addEventListener('keyup', (e) => { keys.delete(e.code); });
+
+        function updatePedalInputs(dt) {
+          const targetThrottle = (keys.has('KeyW') || keys.has('ArrowUp')) ? 1 : sim.throttle;
+          const targetBrake = (keys.has('KeyS') || keys.has('ArrowDown')) ? 1 : sim.brake;
+          // Smooth ramps
+          const tau = 0.08;
+          sim.throttle += (targetThrottle - sim.throttle) * Math.min(1, dt / tau);
+          sim.brake += (targetBrake - sim.brake) * Math.min(1, dt / tau);
+          sim.throttle = Math.max(0, Math.min(1, sim.throttle));
+          sim.brake = Math.max(0, Math.min(1, sim.brake));
+        }
+
+        // Mouse/touch pads
+        function wirePad(padEl, onChange) {
+          let active = false;
+          function posToLevel(ev) {
+            const rect = padEl.getBoundingClientRect();
+            const y = (ev.touches ? ev.touches[0].clientY : ev.clientY) - rect.top;
+            const t = 1 - Math.max(0, Math.min(1, y / rect.height));
+            return t;
+          }
+          function handle(ev) {
+            if (!active) return;
+            onChange(posToLevel(ev));
+            ev.preventDefault();
+          }
+          padEl.addEventListener('mousedown', (e) => { active = true; handle(e); });
+          window.addEventListener('mousemove', handle);
+          window.addEventListener('mouseup', () => { active = false; });
+          padEl.addEventListener('touchstart', (e) => { active = true; handle(e); }, { passive: false });
+          window.addEventListener('touchmove', handle, { passive: false });
+          window.addEventListener('touchend', () => { active = false; });
+        }
+        wirePad(el.throttlePad, (v) => { sim.throttle = v; });
+        wirePad(el.brakePad, (v) => { sim.brake = v; });
+
+        // Physics helpers
+        function engineFrictionTorque(omega) {
+          // Simple quadratic-ish friction vs speed, plus small baseline to sustain idle
+          const base = 12; // Nm
+          const viscous = 0.02 * omega; // Nm per rad/s
+          const quad = 0.00002 * omega * omega;
+          return base + viscous + quad;
+        }
+
+        function engineTorque(throttle, rpm) {
+          // Approximate torque curve (peak 260 Nm @ 3600 rpm)
+          const peakNm = 260;
+          const peakRpm = 3600;
+          const redline = sim.redlineRpm;
+          const x = rpm / peakRpm;
+          // bell-shaped with slight skew
+          let curve = Math.exp(-Math.pow((x - 1) * 1.2, 2) * 0.9);
+          // Fall sharply near redline
+          const red = Math.max(0, 1 - Math.pow(Math.max(0, rpm - 0.85 * redline) / (0.15 * redline), 1.6));
+          curve *= red;
+          // add a small idle torque reserve to prevent stall when throttle tiny
+          const idleAssist = rpm < sim.targetIdleRpm ? (1 - rpm / sim.targetIdleRpm) * 0.25 : 0;
+          const t = peakNm * (curve * (0.15 + 0.85 * throttle) + idleAssist * (0.2 + 0.8 * throttle));
+          return t;
+        }
+
+        function updatePhysics(dt) {
+          // Soft clutch window during start/shift
+          if (sim.clutchSoftTime > 0) sim.clutchSoftTime = Math.max(0, sim.clutchSoftTime - dt);
+
+          let omega = sim.rpm * TWO_PI / 60; // rad/s
+          const gearRatio = sim.gearIndex === 0 ? 0 : (sim.gearIndex === -1 ? 3.2 : sim.gears[sim.gearIndex]);
+          const totalRatio = gearRatio * (gearRatio !== 0 ? sim.finalDrive : 0);
+
+          // Starter contribution
+          if (sim.starterActive) {
+            const starterTorque = 60; // Nm
+            omega += (starterTorque / sim.engineInertia) * dt;
+            // also modulate starter pitch
+            if (sim.audioReady) {
+              audio.starterOsc.frequency.setTargetAtTime(80 + Math.min(230, omega * 0.6), audioCtx.currentTime, 0.05);
+            }
+            if (omega * 60 / TWO_PI > sim.targetIdleRpm * 0.6) {
+              sim.engineRunning = true; // engine caught
+            }
+          }
+
+          // Engine torque production
+          const rpmNow = Math.max(0, omega * 60 / TWO_PI);
+          const th = sim.ignitionOn ? sim.throttle : 0;
+          let torqueNm = sim.engineRunning ? engineTorque(th, rpmNow) : 0;
+
+          // Idle controller when running
+          if (sim.engineRunning && sim.ignitionOn) {
+            const idleErr = Math.max(0, sim.targetIdleRpm - rpmNow);
+            torqueNm += Math.min(60, 0.06 * idleErr);
+          }
+
+          // Load via clutch to wheels
+          let clutchTorque = 0;
+          let slip = 0;
+          let wheelDriveTorque = 0;
+          if (totalRatio !== 0) {
+            const wheelsOmega = sim.vehicleSpeed / sim.wheelRadius;
+            const constrainedOmega = wheelsOmega * totalRatio;
+            slip = omega - constrainedOmega;
+            const stiffness = sim.clutchSoftTime > 0 ? sim.clutchStiffness * 0.25 : sim.clutchStiffness;
+            clutchTorque = -Math.max(-sim.clutchMaxTorque, Math.min(sim.clutchMaxTorque, slip * stiffness));
+            wheelDriveTorque = -clutchTorque / (totalRatio === 0 ? 1 : totalRatio) * 0.92; // driveline efficiency
+          }
+
+          // Engine friction
+          const fric = engineFrictionTorque(omega);
+          const netEngineTorque = torqueNm + clutchTorque - fric;
+          // Integrate engine speed
+          omega += (netEngineTorque / sim.engineInertia) * dt;
+          omega = Math.max(0, Math.min(sim.redlineRpm * TWO_PI / 60, omega));
+          sim.rpm = omega * 60 / TWO_PI;
+
+          // Vehicle dynamics
+          const aeroDrag = 0.5 * sim.airDensity * sim.dragCdA * sim.vehicleSpeed * sim.vehicleSpeed * Math.sign(sim.vehicleSpeed);
+          const roll = sim.rollingCoeff * sim.massKg * g * Math.sign(sim.vehicleSpeed);
+          const brakeF = sim.brake * sim.maxBrakeForce * Math.sign(sim.vehicleSpeed);
+          const driveF = wheelDriveTorque / sim.wheelRadius;
+          const accel = (driveF - aeroDrag - roll - brakeF) / sim.massKg;
+          sim.vehicleSpeed += accel * dt;
+          // prevent tiny oscillations near zero
+          if (Math.abs(sim.vehicleSpeed) < 0.02 && (Math.abs(driveF) + Math.abs(brakeF)) < (roll + 2)) {
+            sim.vehicleSpeed = 0;
+          }
+
+          // Stall conditions
+          if (sim.ignitionOn && sim.engineRunning && sim.rpm < 450 && totalRatio !== 0 && Math.abs(sim.vehicleSpeed) < 0.4 && sim.brake > 0.6) {
+            // lugged to stall
+            sim.engineRunning = false;
+          }
+
+          return { slip };
+        }
+
+        function updateUI(extra) {
+          const rpm = sim.rpm;
+          const rpmPct = Math.min(1, rpm / sim.redlineRpm);
+          el.rpmValue.textContent = Math.round(rpm).toString() + ' rpm';
+          el.rpmBar.style.width = (rpmPct * 100).toFixed(1) + '%';
+
+          const kmh = Math.abs(sim.vehicleSpeed) * 3.6;
+          const msAbs = Math.abs(sim.vehicleSpeed);
+          el.speedValue.textContent = kmh.toFixed(1) + ' km/h' + (sim.vehicleSpeed < 0 ? ' (R)' : '');
+          el.speedBar.style.width = Math.min(100, kmh / 240 * 100).toFixed(1) + '%';
+          el.msValue.textContent = msAbs.toFixed(2) + ' m/s';
+          el.msBar.style.width = Math.min(100, msAbs / 70 * 100).toFixed(1) + '%';
+
+          el.throttleLevel.style.height = (sim.throttle * 100).toFixed(1) + '%';
+          el.brakeLevel.style.height = (sim.brake * 100).toFixed(1) + '%';
+          el.throttleBar.style.width = (sim.throttle * 100).toFixed(1) + '%';
+          el.brakeBar.style.width = (sim.brake * 100).toFixed(1) + '%';
+
+          const slip = extra.slip || 0;
+          el.slipValue.textContent = slip.toFixed(2) + ' rad/s';
+          el.slipBar.style.width = Math.min(100, Math.abs(slip) / 80 * 100).toFixed(1) + '%';
+
+          el.gearLabel.textContent = gearLabelText();
+          el.statusValue.textContent = sim.ignitionOn ? (sim.engineRunning ? 'RUNNING' : (sim.starterActive ? 'CRANKING' : 'ON')) : 'OFF';
+
+          el.ignitionBtn.classList.toggle('on', sim.ignitionOn);
+          el.ignitionBtn.classList.toggle('off', !sim.ignitionOn);
+          el.ignitionBtn.textContent = 'Ignition: ' + (sim.ignitionOn ? 'ON' : 'OFF');
+        }
+
+        function updateAudio() {
+          if (!sim.audioReady) return;
+          const ctx = audioCtx;
+          const now = ctx.currentTime;
+          const running = sim.ignitionOn && (sim.engineRunning || sim.starterActive);
+          const baseGain = running ? 0.08 + 0.25 * (sim.throttle * 0.8 + Math.min(1, sim.rpm / sim.redlineRpm)) : 0.0;
+          const f0 = Math.max(20, Math.min(500, (sim.rpm / 60) * 2));
+          const f1 = Math.max(30, Math.min(1200, f0 * 2.2));
+
+          audio.engineGain.gain.setTargetAtTime(baseGain, now, 0.05);
+          audio.engineOsc.frequency.setTargetAtTime(f0, now, 0.02);
+          audio.engineOsc2.frequency.setTargetAtTime(f1, now, 0.02);
+
+          const noiseFreq = 80 + (sim.rpm / sim.redlineRpm) * 900;
+          audio.noiseFilter.frequency.setTargetAtTime(noiseFreq, now, 0.05);
+        }
+
+        function frame(now) {
+          const dt = Math.min(0.05, (now - sim.lastTime) / 1000) || 0.016;
+          sim.lastTime = now;
+
+          updatePedalInputs(dt);
+
+          // If ignition is off, let rpm decay, cut fuel
+          if (!sim.ignitionOn) {
+            sim.engineRunning = false;
+          }
+
+          const extra = updatePhysics(dt);
+          updateUI(extra);
+          updateAudio();
+
+          requestAnimationFrame(frame);
+        }
+
+        // Wire buttons
+        el.ignitionBtn.addEventListener('click', () => setIgnition(!sim.ignitionOn));
+        el.startBtn.addEventListener('click', startEngine);
+        el.gearUp.addEventListener('click', () => shift(1));
+        el.gearDown.addEventListener('click', () => shift(-1));
+
+        // Audio gate
+        function showAudioGate() {
+          el.audioGate.style.display = 'flex';
+        }
+        function hideAudioGate() {
+          el.audioGate.style.display = 'none';
+        }
+        function primeAudio() {
+          setupAudio();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          hideAudioGate();
+        }
+        el.enableAudioBtn.addEventListener('click', primeAudio);
+        window.addEventListener('click', () => {
+          if (!sim.audioReady) { showAudioGate(); }
+        }, { once: true });
+
+        // Start the animation loop
+        requestAnimationFrame(frame);
+      })();
+    </script>
+  </body>
+</html>
+
